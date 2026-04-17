@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account information and roles",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique user ID from Firebase Auth" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "employee", "driver", "client"] },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string", "format": "uri" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "displayName", "createdAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A package delivery request",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clientId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "description": { "type": "string" },
+        "pickupAddress": { "type": "string" },
+        "deliveryAddress": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "assigned", "collected", "delivering", "delivered", "cancelled"] },
+        "weight": { "type": "string" },
+        "routeId": { "type": "string" },
+        "driverId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "clientId", "clientName", "description", "pickupAddress", "deliveryAddress", "status", "createdAt", "updatedAt"]
+    },
+    "Route": {
+      "title": "Route",
+      "description": "A sequence of orders assigned to a driver",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "driverId": { "type": "string" },
+        "driverName": { "type": "string" },
+        "status": { "type": "string", "enum": ["preparing", "in_route", "completed"] },
+        "orderIds": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "driverId", "driverName", "status", "orderIds", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles and roles"
+    },
+    "orders/{orderId}": {
+      "schema": "Order",
+      "description": "Delivery orders"
+    },
+    "routes/{routeId}": {
+      "schema": "Route",
+      "description": "Driver routes"
+    }
+  }
+}

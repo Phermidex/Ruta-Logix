@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  
+  --color-primary: #4f46e5;
+  --color-primary-dark: #3730a3;
+  --color-bg-app: #f8fafc;
+  --color-sidebar: #1e293b;
+  --color-card-bg: #ffffff;
+  --color-border-subtle: #e2e8f0;
+  --color-text-main: #0f172a;
+  --color-text-muted: #64748b;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+}
+
+@layer base {
+  body {
+    @apply bg-bg-app text-text-main font-sans antialiased;
+  }
+}
+
+/* Custom styles from Professional Polish theme */
+.status-pill {
+  @apply px-2 py-1 rounded text-xs font-medium;
+}
+
+.status-en-ruta { @apply bg-amber-100 text-amber-800; }
+.status-entregado { @apply bg-emerald-100 text-emerald-800; }
+.status-pendiente { @apply bg-slate-100 text-slate-600; }
+
+.driver-route-step {
+  @apply border-l-2 border-primary pl-3 mb-3 relative;
+}
+
+.driver-route-step::before {
+  content: '';
+  @apply absolute -left-[5px] top-0 w-2 h-2 bg-primary rounded-full;
+}
+
+.client-track-bar {
+  @apply h-1.5 bg-slate-200 rounded-full my-4 relative overflow-hidden;
+}
+
+.client-track-progress {
+  @apply h-full bg-primary rounded-full transition-all duration-500;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+

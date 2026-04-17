@@ -1,0 +1,156 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: {userId}
+// Fields:
+//   - uid: string (required) - Firebase Auth UID
+//   - email: string (required) - User email
+//   - role: string (required, enum: admin, employee, driver, client) - User role
+//   - displayName: string (required) - Full name
+//   - photoURL: string (optional) - Avatar URL
+//   - createdAt: string (required) - ISO timestamp
+//
+// Collection: orders
+// Document ID: {orderId}
+// Fields:
+//   - id: string (required)
+//   - clientId: string (required)
+//   - clientName: string (required)
+//   - description: string (required)
+//   - pickupAddress: string (required)
+//   - deliveryAddress: string (required)
+//   - status: string (required, enum: pending, assigned, collected, delivering, delivered, cancelled)
+//   - weight: string (optional)
+//   - routeId: string (optional)
+//   - driverId: string (optional)
+//   - createdAt: string (required)
+//   - updatedAt: string (required)
+//
+// Collection: routes
+// Document ID: {routeId}
+// Fields:
+//   - id: string (required)
+//   - driverId: string (required)
+//   - driverName: string (required)
+//   - status: string (required, enum: preparing, in_route, completed)
+//   - orderIds: list (required) - Array of order IDs
+//   - createdAt: string (required)
+//   - updatedAt: string (required)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && getUserData().role == role;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "hermides07@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isEmployee() {
+      return hasRole('admin') || hasRole('employee');
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    // ===============================================================
+    // Validation Functions
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.size() >= 5 && data.size() <= 6 &&
+             data.uid is string &&
+             data.email is string && isValidEmail(data.email) &&
+             data.role in ['admin', 'employee', 'driver', 'client'] &&
+             data.displayName is string && data.displayName.size() > 0 &&
+             isValidDateString(data.createdAt);
+    }
+
+    function isValidOrder(data) {
+      return data.size() >= 9 && data.size() <= 12 &&
+             data.id is string &&
+             data.clientId is string &&
+             data.clientName is string &&
+             data.description is string && data.description.size() > 0 &&
+             data.pickupAddress is string && data.pickupAddress.size() > 0 &&
+             data.deliveryAddress is string && data.deliveryAddress.size() > 0 &&
+             data.status in ['pending', 'assigned', 'collected', 'delivering', 'delivered', 'cancelled'] &&
+             isValidDateString(data.createdAt) &&
+             isValidDateString(data.updatedAt);
+    }
+
+    function isValidRoute(data) {
+      return data.size() == 7 &&
+             data.id is string &&
+             data.driverId is string &&
+             data.driverName is string &&
+             data.status in ['preparing', 'in_route', 'completed'] &&
+             data.orderIds is list &&
+             isValidDateString(data.createdAt) &&
+             isValidDateString(data.updatedAt);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isEmployee());
+      allow create: if isAuthenticated() && isOwner(userId) && 
+                      isValidUser(request.resource.data) && 
+                      (request.resource.data.role in ['client', 'driver'] || isAdmin());
+      allow update: if isAuthenticated() && 
+                      (isAdmin() || 
+                       (isOwner(userId) && request.resource.data.role == resource.data.role && isValidUser(request.resource.data)));
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAuthenticated() && (resource.data.clientId == request.auth.uid || resource.data.driverId == request.auth.uid || isEmployee());
+      allow create: if isAuthenticated() && isValidOrder(request.resource.data) && request.resource.data.clientId == request.auth.uid;
+      allow update: if isAuthenticated() && isValidOrder(request.resource.data) && 
+                    (isEmployee() || 
+                     (resource.data.driverId == request.auth.uid && request.resource.data.clientId == resource.data.clientId) ||
+                     (resource.data.clientId == request.auth.uid && request.resource.data.status == resource.data.status));
+    }
+
+    match /routes/{routeId} {
+      allow read: if isAuthenticated() && (resource.data.driverId == request.auth.uid || isEmployee());
+      allow write: if isEmployee();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
